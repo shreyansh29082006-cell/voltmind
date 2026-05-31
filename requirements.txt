@@ -1,0 +1,14 @@
+streamlit>=1.35.0
+langchain
+langchain-core
+langchain-community
+langchain-groq
+langchain-huggingface
+langchain-text-splitters
+chromadb
+sentence-transformers
+huggingface-hub
+pypdf
+rank-bm25
+python-dotenv
+tavily-python
