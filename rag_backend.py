@@ -11,6 +11,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_community.retrievers import BM25Retriever
+from langchain_community.vectorstores import FAISS
  
 from dotenv import load_dotenv
  
@@ -55,33 +56,21 @@ def save_index_files(files: list):
  
  
 # ── Vector Store ─────────────────────────────────────────────
+FAISS_PATH = os.path.join(BASE_DIR, "faiss_index")
+
 def get_vector_store():
-    store = Chroma(
-        persist_directory=PERSIST_DIR,
-        embedding_function=embeddings
-    )
- 
-    all_pdfs = [
-        os.path.join(PDF_DIR, f)
-        for f in os.listdir(PDF_DIR)
-        if f.endswith(".pdf")
-    ]
- 
-    indexed_files = get_index_files()
-    new_pdfs = [p for p in all_pdfs if p not in indexed_files]
- 
-    if not new_pdfs:
-        return store
- 
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
- 
-    for pdf_path in new_pdfs:
-        docs   = PyPDFLoader(pdf_path).load()
-        chunks = splitter.split_documents(docs)
-        store.add_documents(chunks)
-        indexed_files.append(pdf_path)
- 
-    save_index_files(indexed_files)
+    all_docs = []
+    for f in os.listdir(PDF_DIR):
+        if f.endswith(".pdf"):
+            docs = PyPDFLoader(os.path.join(PDF_DIR, f)).load()
+            all_docs.extend(splitter.split_documents(docs))
+    
+    if os.path.exists(FAISS_PATH):
+        return FAISS.load_local(FAISS_PATH, embeddings, allow_dangerous_deserialization=True)
+    
+    store = FAISS.from_documents(all_docs, embeddings)
+    store.save_local(FAISS_PATH)
     return store
  
  
