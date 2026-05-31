@@ -1,4 +1,5 @@
 import os
+
 import json
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import PromptTemplate
@@ -30,6 +31,8 @@ AVAILABLE_MODELS = {
     "Llama 3.3 70B (Smart)"  : "llama-3.3-70b-versatile",
    
 }
+
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
  
 # ── Web Search Tool ──────────────────────────────────────────
 web_search_tool = TavilySearchResults(max_results=3)
