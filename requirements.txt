@@ -5,10 +5,11 @@ langchain-community
 langchain-groq
 langchain-huggingface
 langchain-text-splitters
-chromadb
+chromadb==0.4.24
 sentence-transformers
 huggingface-hub
 pypdf
 rank-bm25
 python-dotenv
 tavily-python
+protobuf==3.20.3
