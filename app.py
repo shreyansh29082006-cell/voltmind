@@ -7,7 +7,6 @@ import streamlit as st
 import time
 import os
 
-# ── Page config (must be first Streamlit call) ────────────────
 st.set_page_config(
     page_title="VoltMind — EE Assistant",
     page_icon="⚡",
@@ -15,8 +14,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Import backend ────────────────────────────────────────────
-try:
     from rag_backend import crag_answer, AVAILABLE_MODELS
     BACKEND_AVAILABLE = True
     BACKEND_ERROR = ""
@@ -24,9 +21,7 @@ except Exception as e:
     BACKEND_AVAILABLE = False
     BACKEND_ERROR = str(e)
 
-# ─────────────────────────────────────────────────────────────
-#  CUSTOM CSS
-# ─────────────────────────────────────────────────────────────
+
 st.markdown("""
 <style>
 /* ── Google Font Import ── */
@@ -619,14 +614,11 @@ setTimeout(scrollToBottom, 900);
 """, unsafe_allow_html=True)
 
 
-# ─────────────────────────────────────────────────────────────
-#  SESSION STATE
-# ─────────────────────────────────────────────────────────────
 if "conversations" not in st.session_state:
-    st.session_state.conversations = []   # list of {title, messages, last_route}
+    st.session_state.conversations = []   
 
 if "active_conv" not in st.session_state:
-    st.session_state.active_conv = None   # int index into conversations
+    st.session_state.active_conv = None  
 
 if "model_key" not in st.session_state:
     if BACKEND_AVAILABLE:
@@ -635,10 +627,8 @@ if "model_key" not in st.session_state:
         st.session_state.model_key = "Demo Mode"
 
 if "pending_chip" not in st.session_state:
-    st.session_state.pending_chip = ""    # holds chip text to pre-fill
+    st.session_state.pending_chip = ""    
 
-
-# ── Helpers ───────────────────────────────────────────────────
 def current_messages() -> list:
     if st.session_state.active_conv is None:
         return []
@@ -664,9 +654,8 @@ def delete_conversation(idx: int):
         st.session_state.active_conv -= 1
 
 
-# ─────────────────────────────────────────────────────────────
-#  SIDEBAR
-# ─────────────────────────────────────────────────────────────
+
+
 with st.sidebar:
     # Logo
     st.markdown("""
@@ -676,12 +665,11 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # New Chat button
     if st.button("＋  New Chat", key="new_chat_btn", use_container_width=True):
         start_new_chat()
         st.rerun()
 
-    # Model selector
+
     st.markdown('<div class="sidebar-section-label">Model</div>', unsafe_allow_html=True)
     model_options = list(AVAILABLE_MODELS.keys()) if BACKEND_AVAILABLE else ["Demo Mode"]
     selected_model = st.selectbox(
@@ -693,7 +681,6 @@ with st.sidebar:
     )
     st.session_state.model_key = selected_model
 
-    # History section
     st.markdown('<div class="sidebar-section-label">History</div>', unsafe_allow_html=True)
 
     if not st.session_state.conversations:
@@ -702,12 +689,11 @@ with st.sidebar:
             unsafe_allow_html=True
         )
     else:
-        # Render newest first
+        
         for i, conv in enumerate(reversed(st.session_state.conversations)):
             real_idx = len(st.session_state.conversations) - 1 - i
             is_active = st.session_state.active_conv == real_idx
 
-            # Each history row: title button + delete button
             col_title, col_del = st.columns([5, 1])
             with col_title:
                 label = ("💬 " if is_active else "○  ") + conv["title"]
@@ -721,12 +707,11 @@ with st.sidebar:
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bottom status
+    
     st.markdown("---")
     backend_status = "🟢 Backend ready" if BACKEND_AVAILABLE else "🔴 Backend offline"
     st.markdown(f'<div class="status-bar">{backend_status}</div>', unsafe_allow_html=True)
 
-    # Show last route used dynamically
     last_route = ""
     if st.session_state.active_conv is not None:
         last_route = st.session_state.conversations[st.session_state.active_conv].get("last_route", "")
@@ -735,13 +720,9 @@ with st.sidebar:
     st.markdown(f'<div class="status-bar">{pipeline_label}</div>', unsafe_allow_html=True)
 
 
-# ─────────────────────────────────────────────────────────────
-#  MAIN CONTENT
-# ─────────────────────────────────────────────────────────────
 messages = current_messages()
 is_empty = len(messages) == 0
 
-# Backend warning banner
 if not BACKEND_AVAILABLE and BACKEND_ERROR:
     st.markdown(
         f'<div class="info-banner">⚠️ Backend not loaded — '
@@ -749,7 +730,6 @@ if not BACKEND_AVAILABLE and BACKEND_ERROR:
         unsafe_allow_html=True
     )
 
-# ── EMPTY STATE ───────────────────────────────────────────────
 if is_empty:
     st.markdown("""
     <div class="hero-container">
@@ -760,7 +740,7 @@ if is_empty:
     </div>
     """, unsafe_allow_html=True)
 
-    # Suggestion chips — rendered as Streamlit buttons to work reliably
+
     st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
     CHIPS = [
         "⚡ Three-phase transformer losses",
@@ -776,15 +756,15 @@ if is_empty:
         chip_cols = st.columns(3)
         for idx, chip_text in enumerate(CHIPS):
             with chip_cols[idx % 3]:
-                # Use custom HTML styled button via markdown trick
+            
                 btn_key = f"chip_{idx}"
                 st.markdown(
                     f'<div class="suggestion-chip" onclick="fillInput(\'{chip_text}\')">'
                     f'{chip_text}</div>',
                     unsafe_allow_html=True
                 )
-        # Fallback Streamlit buttons (invisible, triggered by chip JS) — 
-        # actually just render real st.buttons styled as chips for reliability
+        
+        
         st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         btn_row1 = st.columns(3)
         for idx, chip_text in enumerate(CHIPS):
@@ -795,7 +775,7 @@ if is_empty:
 
     st.markdown('<div style="height:80px"></div>', unsafe_allow_html=True)
 
-# ── ACTIVE CHAT: Message History ─────────────────────────────
+
 else:
     st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
@@ -828,7 +808,7 @@ else:
                 route_icons  = {"local": "📂", "web": "🌐", "hybrid": "🔀"}
                 route_labels = {"local": "Local Docs", "web": "Web Search", "hybrid": "Hybrid"}
 
-                # Route badge
+
                 st.markdown(
                     f'<span class="route-badge route-{route}">'
                     f'{route_icons.get(route,"⚡")} {route_labels.get(route, route.title())}'
@@ -836,7 +816,7 @@ else:
                     unsafe_allow_html=True
                 )
 
-                # Interpreted-as pill (if query was rewritten)
+                
                 if standalone_q and standalone_q.strip() != msg.get("original_q", "").strip():
                     safe_q = standalone_q[:120] + ("…" if len(standalone_q) > 120 else "")
                     st.markdown(
@@ -844,10 +824,10 @@ else:
                         unsafe_allow_html=True
                     )
 
-                # Answer body (use st.markdown so it renders code blocks, bold, etc.)
+        
                 st.markdown(content)
 
-                # Timestamp + copy button
+            
                 safe_content = content.replace("`", "'").replace("\n", " ")[:300]
                 st.markdown(
                     f'<div class="msg-meta">'
@@ -859,7 +839,7 @@ else:
                     unsafe_allow_html=True
                 )
 
-                # Sources expander
+        
                 if evaluations:
                     correct_n   = sum(1 for e in evaluations if e["label"] == "correct")
                     ambiguous_n = sum(1 for e in evaluations if e["label"] == "ambiguous")
@@ -886,10 +866,10 @@ else:
                                     unsafe_allow_html=True
                                 )
 
-    # Spacer so last message clears the fixed input bar
+    
     st.markdown("<div style='height:110px'></div>", unsafe_allow_html=True)
 
-    # Auto-scroll JS trigger after messages render
+
     st.markdown(
         "<script>setTimeout(function(){"
         "var el=window.parent.document.querySelector('[data-testid=\"stMain\"]');"
@@ -898,9 +878,8 @@ else:
     )
 
 
-# ─────────────────────────────────────────────────────────────
-#  INPUT BAR
-# ─────────────────────────────────────────────────────────────
+
+
 col_left, col_mid, col_right = st.columns([1, 4, 1])
 with col_mid:
     st.markdown(
@@ -910,7 +889,7 @@ with col_mid:
         unsafe_allow_html=True
     )
 
-# If a chip was clicked, use its text as the default value
+
 chat_input_value = st.session_state.get("pending_chip", "")
 
 question = st.chat_input(
@@ -918,10 +897,8 @@ question = st.chat_input(
     key="main_input"
 )
 
-# Clear the pending chip after it's been surfaced
 if st.session_state.pending_chip:
-    # The chip text is now in `question` if user confirmed, or we treat it as a pre-fill.
-    # Because st.chat_input can't be pre-filled programmatically, we trigger it directly.
+    
     question = st.session_state.pending_chip
     st.session_state.pending_chip = ""
 
@@ -933,14 +910,12 @@ with col_m2:
     )
 
 
-# ─────────────────────────────────────────────────────────────
-#  HANDLE QUERY
-# ─────────────────────────────────────────────────────────────
+
 if question and question.strip():
     import datetime
     ts_now = datetime.datetime.now().strftime("%H:%M")
 
-    # Ensure there is an active conversation
+    
     if st.session_state.active_conv is None:
         new_conv = {
             "title"      : derive_title(question),
@@ -952,14 +927,14 @@ if question and question.strip():
 
     messages = current_messages()
 
-    # 1. Save user message immediately (with timestamp)
+    
     messages.append({
         "role"      : "user",
         "content"   : question,
         "timestamp" : ts_now,
     })
 
-    # 2. Render user bubble right now
+    
     with st.chat_message("user"):
         copy_id = f"copy_u_live"
         st.markdown(
@@ -973,7 +948,7 @@ if question and question.strip():
             unsafe_allow_html=True
         )
 
-    # 3. Show thinking indicator while backend runs
+
     with st.chat_message("assistant"):
         thinking_slot = st.empty()
         thinking_slot.markdown(
@@ -983,7 +958,7 @@ if question and question.strip():
             unsafe_allow_html=True
         )
 
-        # 4. Call backend
+        
         if BACKEND_AVAILABLE:
             try:
                 model_name = AVAILABLE_MODELS[st.session_state.model_key]
@@ -1012,10 +987,9 @@ if question and question.strip():
             evaluations  = []
             standalone_q = question
 
-        # 5. Clear the thinking dots
         thinking_slot.empty()
 
-    # 6. Persist assistant message with all metadata
+
     messages.append({
         "role"        : "assistant",
         "content"     : answer,
@@ -1026,10 +1000,9 @@ if question and question.strip():
         "timestamp"   : ts_now,
     })
 
-    # 7. Update conversation metadata
     conv = st.session_state.conversations[st.session_state.active_conv]
     conv["last_route"] = route
-    # Refresh title if it's still the default from first message
+    
     if len(messages) == 2:
         conv["title"] = derive_title(question)
 
