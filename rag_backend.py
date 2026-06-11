@@ -17,7 +17,6 @@ from dotenv import load_dotenv
  
 load_dotenv()
  
-# ── Constants ────────────────────────────────────────────────
 BASE_DIR            = os.path.dirname(os.path.abspath(__file__))
 PDF_DIR             = os.path.join(BASE_DIR, "electrical")
 PERSIST_DIR         = os.path.join(BASE_DIR, "chroma_db")
@@ -35,14 +34,11 @@ AVAILABLE_MODELS = {
 
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
  
-# ── Web Search Tool ──────────────────────────────────────────
 web_search_tool = TavilySearchResults(max_results=3)
  
-# ── Embeddings ───────────────────────────────────────────────
 embeddings = HuggingFaceEmbeddings(model_name=EMBED_MODEL)
  
- 
-# ── Incremental Indexing Helpers ─────────────────────────────
+
 def get_index_files():
     if os.path.exists(INDEXED_FILE_LOG):
         with open(INDEXED_FILE_LOG, "r") as f:
@@ -54,8 +50,6 @@ def save_index_files(files: list):
     with open(INDEXED_FILE_LOG, "w") as f:
         json.dump(files, f, indent=2)
  
- 
-# ── Vector Store ─────────────────────────────────────────────
 FAISS_PATH = os.path.join(BASE_DIR, "faiss_index")
 
 def get_vector_store():
@@ -86,7 +80,6 @@ def load_all_documents():
     return all_docs
  
  
-# ── Retrievers ───────────────────────────────────────────────
 vector_store = get_vector_store()
  
 vector_retriever = vector_store.as_retriever(
@@ -111,14 +104,12 @@ def hybrid_retrieve(query: str) -> list:
     return unique_docs
  
  
-# ─────────────────────────────────────────────────────────────
-#  LLM factory — allows runtime model switching
-# ─────────────────────────────────────────────────────────────
+
 def make_llm(model_name: str):
     return ChatGroq(model=model_name, temperature=0)
  
  
-# ── CRAG Component 1 — Retrieval Evaluator ───────────────────
+#  CRAG Component 1 — Retrieval Evaluato
 evaluator_prompt = PromptTemplate(
     template="""You are a relevance grader.
 Given a query and a document, score how relevant the document is for answering the query.
@@ -154,7 +145,7 @@ def retrieval_evaluator(query: str, docs: list, llm) -> list[dict]:
     return results
  
  
-# ── CRAG Component 2 — Web Search Refinement ─────────────────
+#  CRAG Component 2 — Web Search Refinement
 query_rewrite_prompt = PromptTemplate(
     template="""Rewrite the following question into a concise, keyword-focused web search query.
 Return ONLY the rewritten query, nothing else.
@@ -194,7 +185,7 @@ def web_search_refinement(query: str, llm) -> str:
     return final_context
  
  
-# ── CRAG Component 3 — Retrieval Refinement ──────────────────
+# CRAG Component 3 — Retrieval Refinement
 refine_prompt = PromptTemplate(
     template="""You are a knowledge extractor.
 From the document below, extract ONLY the sentences directly relevant to answering the question.
@@ -220,7 +211,7 @@ def retrieval_refinement(query: str, docs: list, llm) -> str:
     return "\n\n".join(refined_parts)
  
  
-# ── CRAG Component 4 — Ambiguous Handler ─────────────────────
+#  CRAG Component 4 — Ambiguous Handler
 def ambiguous_handler(query: str, correct_docs: list, incorrect_docs: list, llm) -> str:
     local_context = retrieval_refinement(query, correct_docs, llm) if correct_docs else ""
     web_context   = web_search_refinement(query, llm)
@@ -233,7 +224,7 @@ def ambiguous_handler(query: str, correct_docs: list, incorrect_docs: list, llm)
     return context
  
  
-# ── CRAG Orchestrator ─────────────────────────────────────────
+# CRAG Orchestrator
 def crag_route(query: str, evaluations: list, llm) -> tuple[str, str]:
     """Returns (context, route_label)."""
     correct_docs   = [i["doc"] for i in evaluations if i["label"] == "correct"]
@@ -249,7 +240,7 @@ def crag_route(query: str, evaluations: list, llm) -> tuple[str, str]:
         return ambiguous_handler(query, local_docs, incorrect_docs, llm), "hybrid"
  
  
-# ── Prompts ───────────────────────────────────────────────────
+#  Prompts
 contextualize_prompt = PromptTemplate(
     template="""Given the conversation history and latest question, \
 rewrite the question to be fully standalone. \
@@ -283,7 +274,7 @@ Answer:""",
 )
  
  
-# ── Chat History Helpers ──────────────────────────────────────
+# Chat History Helpers
 def format_history(chat_history: list[dict]) -> str:
     lines = []
     for msg in chat_history:
@@ -292,7 +283,7 @@ def format_history(chat_history: list[dict]) -> str:
     return "\n".join(lines)
  
  
-# ── Main CRAG Answer Function ─────────────────────────────────
+#  Main CRAG Answer Function
 def crag_answer(
     raw_question  : str,
     chat_history  : list[dict],
@@ -308,20 +299,20 @@ def crag_answer(
     llm     = make_llm(model_name)
     history = format_history(chat_history)
  
-    # 1. Standalone question
+    # 1 Standalone question
     ctx_chain    = contextualize_prompt | llm | StrOutputParser()
     standalone_q = ctx_chain.invoke({"history": history, "question": raw_question})
  
-    # 2. Hybrid retrieval
+    # 2 Hybrid retrieval
     docs = hybrid_retrieve(standalone_q)
  
-    # 3. Evaluate documents
+    # 3 Evaluate documents
     evaluations = retrieval_evaluator(standalone_q, docs, llm)
  
-    # 4. Route
+    # 4 Route
     context, route = crag_route(standalone_q, evaluations, llm)
  
-    # 5. Generate answer
+    # 5 Generate answer
     answer = (qa_prompt | llm | StrOutputParser()).invoke({
         "history" : history,
         "context" : context,
