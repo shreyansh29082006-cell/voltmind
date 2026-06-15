@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
+try:
     from rag_backend import crag_answer, AVAILABLE_MODELS
     BACKEND_AVAILABLE = True
     BACKEND_ERROR = ""
